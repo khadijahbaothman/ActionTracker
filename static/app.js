@@ -8,7 +8,9 @@ const managers = [
   { name: "Loay Almaddah", title: "VP Technical", img: "/static/images/loay.png" },
   { name: "Mohammed Abdulsalam", title: "VP Finance", img: "/static/images/abuamdslam.png" },
   { name: "Mohammad A. Mazi", title: "CEO", img: "/static/images/mazi.png" },
-  { name: "Waad R. Binhimd", title: "Corporate Affairs", img: "/static/images/Waad.jpeg" }
+  { name: "Waad R. Binhimd", title: "Corporate Affairs", img: "/static/images/Waad.jpeg" },
+  { name: "ABDULLAH AL-MUTAIRI", title: "Local Stations Director", img: "/static/images/ABDULLAH AWADULLAH AL-MUTAIRI.png" }
+
 ];
 
 const MY_USER = "Omar Alamoudi";
@@ -202,18 +204,28 @@ function getStatsForOwner(owner) {
 
 function getGlobalStats() {
   const today = new Date().toISOString().split("T")[0];
-  let stats = { total:0, completed:0, inProgress:0, underReview:0, overdue:0 };
+  let stats = {
+    total: 0,
+    completed: 0,
+    inProgress: 0,
+    underReview: 0,
+    overdue: 0
+  };
 
   tasks.forEach(t => {
-    const owners = Array.isArray(t.owner) ? t.owner : [t.owner];
-    stats.total += owners.length;
+    stats.total++;
 
-    owners.forEach(() => {
-      if (t.status === "Completed") stats.completed++;
-      if (t.status === "In Progress") stats.inProgress++;
-      if (t.status === "Under Review") stats.underReview++;
-      if (t.status !== "Completed" && t.due && toISODate(t.due) < today) stats.overdue++;
-    });
+    if (t.status === "Completed") stats.completed++;
+    if (t.status === "In Progress") stats.inProgress++;
+    if (t.status === "Under Review") stats.underReview++;
+
+    if (
+      t.status !== "Completed" &&
+      t.due &&
+      toISODate(t.due) < today
+    ) {
+      stats.overdue++;
+    }
   });
 
   return stats;
@@ -287,7 +299,7 @@ function exportMyTasksToCSV() {
 
   const a = document.createElement("a");
   a.href = url;
-  a.download = `my_tasks_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `my_tasks_${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
 
   URL.revokeObjectURL(url);
@@ -361,212 +373,222 @@ function renderStatusChart() {
 
 
 function getOwnerOverviewData() {
-    const today = new Date().toISOString().split("T")[0];
-    const result = {};
-  
-    tasks.forEach(t => {
-      const owners = Array.isArray(t.owner) ? t.owner : [t.owner];
-  
-      owners.forEach(o => {
-        if (!result[o]) {
-          result[o] = {
-            planned: 0,
-            inProgress: 0,
-            review: 0,
-            completed: 0,
-            overdue: 0
-          };
-        }
-  
-        if (t.status === "Planned") result[o].planned++;
-        if (t.status === "In Progress") result[o].inProgress++;
-        if (t.status === "Under Review") result[o].review++;
-        if (t.status === "Completed") result[o].completed++;
-  
-        if (
-          t.status !== "Completed" &&
-          t.due &&
-          toISODate(t.due) < today
-        ) {
-          result[o].overdue++;
-        }
-      });
+  const today = new Date().toISOString().split("T")[0];
+  const result = {};
+
+  tasks.forEach(t => {
+    const owners = Array.isArray(t.owner) ? t.owner : [t.owner];
+
+    owners.forEach(o => {
+      if (!result[o]) {
+        result[o] = {
+          planned: 0,
+          inProgress: 0,
+          review: 0,
+          completed: 0,
+          overdue: 0
+        };
+      }
+
+      if (t.status === "Planned") result[o].planned++;
+      if (t.status === "In Progress") result[o].inProgress++;
+      if (t.status === "Under Review") result[o].review++;
+      if (t.status === "Completed") result[o].completed++;
+
+      if (
+        t.status !== "Completed" &&
+        t.due &&
+        toISODate(t.due) < today
+      ) {
+        result[o].overdue++;
+      }
     });
-  
-    return result;
+  });
+
+  return result;
+}
+
+let ownersOverviewChartInstance = null;
+
+function renderOwnersOverviewChart() {
+  const data = getOwnerOverviewData();
+  const labels = Object.keys(data);
+
+  const planned = labels.map(o => data[o].planned);
+  const inProgress = labels.map(o => data[o].inProgress);
+  const review = labels.map(o => data[o].review);
+  const completed = labels.map(o => data[o].completed);
+  const overdue = labels.map(o => data[o].overdue);
+
+  const canvas = document.getElementById("ownersOverviewChart");
+  if (!canvas) return;
+
+  if (ownersOverviewChartInstance) {
+    ownersOverviewChartInstance.destroy();
   }
-  
-  let ownersOverviewChartInstance = null;
-  
-  function renderOwnersOverviewChart() {
-    const data = getOwnerOverviewData();
-    const labels = Object.keys(data);
-  
-    const planned = labels.map(o => data[o].planned);
-    const inProgress = labels.map(o => data[o].inProgress);
-    const review = labels.map(o => data[o].review);
-    const completed = labels.map(o => data[o].completed);
-    const overdue = labels.map(o => data[o].overdue);
-  
-    const canvas = document.getElementById("ownersOverviewChart");
-    if (!canvas) return;
-  
-    if (ownersOverviewChartInstance) {
-      ownersOverviewChartInstance.destroy();
-    }
-  
-    ownersOverviewChartInstance = new Chart(canvas, {
-      type: "bar",
-      data: {
-        labels,
-        datasets: [
-          { label: "Planned",
+
+  ownersOverviewChartInstance = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Planned",
           data: planned,
           backgroundColor: "rgba(148,163,184,0.35)",
           borderColor: "#94A3B8",
           borderWidth: 2,
-          borderRadius: 6},
-          {  label: "In Progress",
+          borderRadius: 6
+        },
+        {
+          label: "In Progress",
           data: inProgress,
           backgroundColor: "rgba(59,130,246,0.35)",
           borderColor: "#3B82F6",
           borderWidth: 2,
-          borderRadius: 6},
-          {  label: "Under Review",
-          data: review ,
+          borderRadius: 6
+        },
+        {
+          label: "Under Review",
+          data: review,
           backgroundColor: "rgba(167,139,250,0.35)",
           borderColor: "#A78BFA",
           borderWidth: 2,
-          borderRadius: 6 },
-          {  label: "Completed",
+          borderRadius: 6
+        },
+        {
+          label: "Completed",
           data: completed,
           backgroundColor: "rgba(34,197,94,0.35)",
           borderColor: "#22C55E",
           borderWidth: 2,
-          borderRadius: 6 },
-          {  label: "Overdue",
+          borderRadius: 6
+        },
+        {
+          label: "Overdue",
           data: overdue,
           backgroundColor: "rgba(239,68,68,0.35)",
           borderColor: "#EF4444",
           borderWidth: 2,
-          borderRadius: 6}
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: { stacked: true },
-          y: {
-            stacked: true,
-            beginAtZero: true,
-            ticks: { stepSize: 1 }
-          }
-        },
-        plugins: {
-          legend: { position: "top" }
+          borderRadius: 6
         }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          ticks: { stepSize: 1 }
+        }
+      },
+      plugins: {
+        legend: { position: "top" }
+      }
+    }
+  });
+}
+
+function getUpcomingTasksByWeek(weeksAhead = 10) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // بداية الأسبوع (Monday)
+  const startOfWeek = new Date(today);
+  const day = startOfWeek.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  startOfWeek.setDate(startOfWeek.getDate() + diff);
+
+  const labels = [];
+  const counts = [];
+  const details = {};
+
+  for (let i = 0; i < weeksAhead; i++) {
+    const weekStart = new Date(startOfWeek);
+    weekStart.setDate(startOfWeek.getDate() + i * 7);
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+
+    const monthName = weekStart.toLocaleString("en-US", { month: "short" });
+    const weekNumberInMonth = Math.ceil(
+      (weekStart.getDate() + weekStart.getDay()) / 7
+    );
+
+    const label = `${monthName} - Week ${weekNumberInMonth}`;
+    labels.push(label);
+
+    details[label] = [];
+
+    tasks.forEach(t => {
+      if (!t.due || t.status === "Completed") return;
+
+      const dueDate = new Date(toISODate(t.due));
+      dueDate.setHours(0, 0, 0, 0);
+
+      if (dueDate >= weekStart && dueDate <= weekEnd) {
+        details[label].push(t);
       }
     });
+
+    counts.push(details[label].length);
   }
 
-  function getUpcomingTasksByWeek(weeksAhead = 10) {
-    const today = new Date();
-    today.setHours(0,0,0,0);
-  
-    // بداية الأسبوع (Monday)
-    const startOfWeek = new Date(today);
-    const day = startOfWeek.getDay();
-    const diff = (day === 0 ? -6 : 1) - day; 
-    startOfWeek.setDate(startOfWeek.getDate() + diff);
-  
-    const labels = [];
-    const counts = [];
-    const details = {};
-  
-    for (let i = 0; i < weeksAhead; i++) {
-      const weekStart = new Date(startOfWeek);
-      weekStart.setDate(startOfWeek.getDate() + i * 7);
-  
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-  
-      const monthName = weekStart.toLocaleString("en-US", { month: "short" });
-      const weekNumberInMonth = Math.ceil(
-        (weekStart.getDate() + weekStart.getDay()) / 7
-      );
+  return { labels, counts, details };
+}
 
-const label = `${monthName} - Week ${weekNumberInMonth}`;
-      labels.push(label);
-  
-      details[label] = [];
-  
-      tasks.forEach(t => {
-        if (!t.due || t.status === "Completed") return;
-  
-        const dueDate = new Date(toISODate(t.due));
-        dueDate.setHours(0,0,0,0);
-  
-        if (dueDate >= weekStart && dueDate <= weekEnd) {
-          details[label].push(t);
-        }
-      });
-  
-      counts.push(details[label].length);
-    }
-  
-    return { labels, counts, details };
-  }
+function renderUpcomingLineChart() {
+  const data = getUpcomingTasksByWeek(10);
+  const canvas = document.getElementById("upcomingLineChart");
+  if (!canvas) return;
 
-  function renderUpcomingLineChart() {
-    const data = getUpcomingTasksByWeek(10);
-    const canvas = document.getElementById("upcomingLineChart");
-    if (!canvas) return;
-  
-    if (upcomingLineChartInstance) upcomingLineChartInstance.destroy();
-  
-    upcomingLineChartInstance = new Chart(canvas, {
-      type: "line",
-      data: {
-        labels: data.labels,
-        datasets: [{
-          label: "Tasks per Week",
-          data: data.counts,
-          borderColor: "#507A49",
-          backgroundColor: "rgba(80,122,73,0.2)",
-          fill: true,
-          tension: 0.35,
-          pointRadius: 4,
-          pointHoverRadius: 6
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: function (ctx) {
-                const week = ctx.label;
-                const list = data.details[week] || [];
-  
-                return list.map(t =>
-                  `• ${t.title} (${(t.owner || []).join(", ")})`
-                );
-              }
+  if (upcomingLineChartInstance) upcomingLineChartInstance.destroy();
+
+  upcomingLineChartInstance = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: data.labels,
+      datasets: [{
+        label: "Tasks per Week",
+        data: data.counts,
+        borderColor: "#507A49",
+        backgroundColor: "rgba(80,122,73,0.2)",
+        fill: true,
+        tension: 0.35,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              const week = ctx.label;
+              const list = data.details[week] || [];
+
+              return list.map(t =>
+                `• ${t.title} (${(t.owner || []).join(", ")})`
+              );
             }
           }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { stepSize: 1 }
-          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 1 }
         }
       }
-    });
-  }
+    }
+  });
+}
 
 /* ================= RENDER ================= */
 function renderAll() {
@@ -625,15 +647,15 @@ function renderTasks() {
     "Overdue": 4,
     "Completed": 5
   };
-  
+
   const sortedTasks = [...tasks].sort((a, b) => {
     return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
   });
 
-  sortedTasks.forEach((t, i) => { 
+  sortedTasks.forEach((t, i) => {
     if (!Array.isArray(t.owner) || !t.owner.includes(owner)) return;
 
-// ✅ status filter
+    // ✅ status filter
     if (activeStatusFilter && t.status !== activeStatusFilter) return;
 
     const card = document.createElement("div");
