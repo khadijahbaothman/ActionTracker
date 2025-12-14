@@ -628,7 +628,9 @@ function renderTasks() {
     if (t.status !== "Completed" && t.due && toISODate(t.due) < today) card.classList.add("overdue");
 
     card.innerHTML = `
-      <div class="status-badge">${t.status}</div>
+    <div class="status-badge status-${t.status.replace(" ", "-").toLowerCase()}">
+    ${t.status}
+  </div>
       <div class="task-title">${t.title}</div>
       <div class="task-meta">Start: ${t.startDate || "-"}</div>
       <div class="task-meta">Due: ${toISODate(t.due) || "-"}</div>
