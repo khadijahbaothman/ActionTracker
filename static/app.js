@@ -9,7 +9,9 @@ const managers = [
   { name: "Mohammed Abdulsalam", title: "VP Finance", img: "/static/images/abuamdslam.png" },
   { name: "Mohammad A. Mazi", title: "CEO", img: "/static/images/mazi.png" },
   { name: "Waad R. Binhimd", title: "Corporate Affairs", img: "/static/images/Waad.jpeg" },
-  { name: "ABDULLAH AL-MUTAIRI", title: "Local Stations Director", img: "/static/images/ABDULLAH AWADULLAH AL-MUTAIRI.png" }
+  { name: "ABDULLAH AL-MUTAIRI", title: "Local Stations Director", img: "/static/images/ABDULLAH AWADULLAH AL-MUTAIRI.png" },
+  { name: "BADER AL-HASNAN", title: "RUH Station Senior Director", img: "/static/images/BADER ALI KHALIFAH AL-HASNAN.png" },
+  { name: "MOHAMMED BIN SURAYA", title: "JED Station Senior Director", img: "/static/images/MOHAMMED BIN SURAYA.png" }
 
 ];
 
