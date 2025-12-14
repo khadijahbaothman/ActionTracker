@@ -4,8 +4,7 @@ import os
 
 app = Flask(__name__)
 
-DATA_FILE = "tasks.json"
-
+DATA_FILE = "/var/data/tasks.json"
 
 
 
