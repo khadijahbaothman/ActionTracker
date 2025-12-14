@@ -617,7 +617,20 @@ function renderTasks() {
   const owner = currentView === "my" ? MY_USER : selectedManager;
   const today = new Date().toISOString().split("T")[0];
 
-  tasks.forEach((t, i) => {
+
+  const statusOrder = {
+    "Planned": 1,
+    "In Progress": 2,
+    "Under Review": 3,
+    "Overdue": 4,
+    "Completed": 5
+  };
+  
+  const sortedTasks = [...tasks].sort((a, b) => {
+    return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
+  });
+
+  sortedTasks.forEach((t, i) => { 
     if (!Array.isArray(t.owner) || !t.owner.includes(owner)) return;
 
 // ✅ status filter
