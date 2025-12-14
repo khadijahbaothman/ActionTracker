@@ -20,6 +20,7 @@ let tasks = [];
 let editingIndex = null;
 let currentTaskIndex = null;
 let exportCsvBtn;
+let activeStatusFilter = null; // null = no filter
 
 /* ✅ NEW: flag to avoid re-forcing checkboxes while user interacts */
 let ownersInitialized = false;
@@ -48,6 +49,28 @@ document.addEventListener("DOMContentLoaded", () => {
   loadTasks();
 });
 
+document.querySelectorAll(".kpi-card[data-status]").forEach(card => {
+  card.addEventListener("click", () => {
+    const status = card.dataset.status;
+
+    // toggle
+    if (activeStatusFilter === status) {
+      activeStatusFilter = null;
+      card.classList.remove("active-filter");
+    } else {
+      activeStatusFilter = status;
+
+      // remove highlight from others
+      document
+        .querySelectorAll(".kpi-card")
+        .forEach(c => c.classList.remove("active-filter"));
+
+      card.classList.add("active-filter");
+    }
+
+    renderTasks();
+  });
+});
 /* ================= BIND ================= */
 function bindDOM() {
   managersRow = document.getElementById("managersRow");
@@ -596,6 +619,9 @@ function renderTasks() {
 
   tasks.forEach((t, i) => {
     if (!Array.isArray(t.owner) || !t.owner.includes(owner)) return;
+
+// ✅ status filter
+    if (activeStatusFilter && t.status !== activeStatusFilter) return;
 
     const card = document.createElement("div");
     card.className = "task-card";

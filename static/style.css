@@ -612,18 +612,26 @@
   }
 
   .icon-btn.csv {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    border: 1.5px solid #507A49;
+    width: 56px;        /* نفس زر + */
+    height: 56px;       /* نفس زر + */
+    border-radius: 16px;
+    border: 2px solid #507A49;
     background: transparent;
     color: #507A49;
     cursor: pointer;
+  
     display: flex;
     align-items: center;
     justify-content: center;
+  
+    font-size: 22px;    /* حجم أيقونة CSV */
   }
   
   .icon-btn.csv:hover {
     background: rgba(80,122,73,0.1);
+  }
+
+  .kpi-card.active-filter {
+    outline: 3px solid rgba(9, 88, 16, 0.6);
+    transform: translateY(-2px);
   }
