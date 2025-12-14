@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Action Tracker</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+  <div class="page">
+    <div class="container">
+
+      <!-- HEADER -->
+      <div class="header-row">
+        <div>
+          <div class="page-title">Action Tracker</div>
+          <div class="page-subtitle">-</div>
+        </div>
+
+        <div class="header-actions">
+          <button class="my-btn" id="myTasksBtn">My Tasks</button>
+          <button class="add-btn" id="addBtn">+</button>
+        </div>
+      </div>
+
+      <button id="backBtn" class="back-btn" style="display:none;">
+        ← Back to Dashboard
+      </button>
+
+      <!-- KPI -->
+      <div id="kpiContainer" class="kpi-container">
+        <div class="kpi-card green">
+          <div class="kpi-left">
+            <span id="kpiTotal" class="card-value">0</span>
+            <span class="card-text">All Tasks</span>
+          </div>
+          <i class="fas fa-layer-group icon"></i>
+        </div>
+
+        <div class="kpi-card green-dark">
+          <div class="kpi-left">
+            <span id="kpiCompleted" class="card-value">0</span>
+            <span class="card-text">Completed</span>
+          </div>
+          <i class="fas fa-check-circle icon"></i>
+        </div>
+
+        <div class="kpi-card orange">
+          <div class="kpi-left">
+            <span id="kpiProgress" class="card-value">0</span>
+            <span class="card-text">In Progress</span>
+          </div>
+          <i class="fas fa-spinner icon"></i>
+        </div>
+
+        <div class="kpi-card blue">
+          <div class="kpi-left">
+            <span id="kpiReview" class="card-value">0</span>
+            <span class="card-text">Under Review</span>
+          </div>
+          <i class="fas fa-search icon"></i>
+        </div>
+
+        <div class="kpi-card red">
+          <div class="kpi-left">
+            <span id="kpiOverdue" class="card-value">0</span>
+            <span class="card-text">Overdue</span>
+          </div>
+          <i class="fas fa-clock icon"></i>
+        </div>
+      </div>
+
+      <!-- MY ANALYTICS -->
+      <div id="myAnalytics" class="analytics-box" style="display:none;">
+        <h3>Task Insights</h3>
+
+        <div id="topOwnersList"></div>
+
+        <!-- ✅ Charts row (جنب بعض) -->
+        <div class="charts-row">
+            <div class="chart-box" style="width:100%;">
+              <canvas id="ownersOverviewChart"></canvas>
+            </div>
+          </div>
+
+        <!-- Upcoming line chart -->
+        <div class="timeline-box">
+          <h4 class="timeline-title">Upcoming Tasks Timeline</h4>
+          <div class="timeline-canvas">
+            <canvas id="upcomingLineChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVE TASKS -->
+      <div class="task-wrapper">
+        <div id="tasksGrid" class="tasks-grid"></div>
+      </div>
+
+      <!-- COMPLETED -->
+      <div class="completed-header">Completed Tasks</div>
+      <div id="completedGrid" class="tasks-grid"></div>
+
+    </div>
+  </div>
+
+  <!-- MANAGERS FOOTER -->
+  <div class="managers-footer" id="managersFooter">
+    <div id="managersRow" class="managers-row"></div>
+  </div>
+
+  <!-- VIEW MODAL -->
+  <div id="modalBackdrop" class="modal-backdrop" style="display:none;">
+    <div class="modal">
+      <button id="modalClose" class="modal-close">&times;</button>
+
+      <div id="modalTitle" class="modal-title"></div>
+      <div id="modalStart" class="modal-item"></div>
+      <div id="modalDue" class="modal-item"></div>
+      <div id="modalOwner" class="modal-item"></div>
+      <div id="modalStatus" class="modal-item"></div>
+      <div id="modalDesc" class="modal-item"></div>
+
+      <div class="modal-actions">
+        <button id="completeTaskBtn" class="btn primary-action">
+          <i class="fas fa-check-circle"></i>
+          <span>Mark as Completed</span>
+        </button>
+
+        <div class="secondary-actions">
+          <button id="updateTaskBtn" class="icon-btn edit">
+            <i class="fas fa-pen"></i>
+          </button>
+
+          <button id="deleteTaskBtn" class="icon-btn delete">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT MODAL -->
+  <div id="formBackdrop" class="modal-backdrop" style="display:none;">
+    <div class="modal" style="max-width:480px;">
+      <button id="formClose" class="modal-close">&times;</button>
+
+      <div id="formTitle" class="modal-title">Add</div>
+
+      <div class="modal-item">
+        <label>Task Title</label>
+        <input id="taskTitleInput" class="input" />
+      </div>
+
+      <div class="modal-item">
+        <label>Due Date</label>
+        <!-- ✅ showPicker helps on some browsers + no transform issues now -->
+        <input
+          id="taskDueInput"
+          type="date"
+          class="input"
+          onclick="this.showPicker && this.showPicker()"
+        />
+      </div>
+
+      <div class="modal-item">
+        <label>Responsible</label>
+        <!-- ✅ checklist instead of select -->
+        <div id="taskOwnerChecklist" class="owner-checklist"></div>
+      </div>
+
+      <div class="modal-item">
+        <label>Status</label>
+        <select id="taskStatusInput" class="input">
+          <option>Planned</option>
+          <option>In Progress</option>
+          <option>Under Review</option>
+          <option>Completed</option>
+        </select>
+      </div>
+
+      <div class="modal-item">
+        <label>Description</label>
+        <textarea id="taskDescInput" class="input" rows="4"></textarea>
+      </div>
+
+      <div class="modal-item">
+        <label>Related Link</label>
+        <input
+          id="taskLinkInput"
+          class="input"
+          type="url"
+          placeholder="https://example.com"
+        />
+      </div>
+
+      <button id="saveTaskBtn" class="btn full" style="background:#204A18;">
+        Save Task
+      </button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
