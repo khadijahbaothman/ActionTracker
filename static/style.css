@@ -646,8 +646,8 @@
   
   /* Planned */
   .status-planned {
-    background: rgba(59,130,246,0.15);
-    color: #065f46;
+    background: #065f46;
+    color: #EEEEEE;
   }
   
   /* In Progress */
