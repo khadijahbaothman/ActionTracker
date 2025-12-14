@@ -647,7 +647,7 @@
   /* Planned */
   .status-planned {
     background: rgba(59,130,246,0.15);
-    color: #3B82F6;
+    color: #065f46;
   }
   
   /* In Progress */
@@ -659,7 +659,7 @@
   /* Under Review */
   .status-under-review {
     background: rgba(139,92,246,0.15);
-    color: #8B5CF6;
+    color: #3B82F6;
   }
   
   /* Completed */
