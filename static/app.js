@@ -54,22 +54,22 @@ document.addEventListener("DOMContentLoaded", () => {
   loadTasks();
 });
 
-document.querySelectorAll(".kpi-card[data-status]").forEach(card => {
+document.querySelectorAll(".kpi-card").forEach(card => {
   card.addEventListener("click", () => {
-    const status = card.dataset.status;
+    const status = card.dataset.status || null; // all = null
 
     // toggle
     if (activeStatusFilter === status) {
       activeStatusFilter = null;
-      card.classList.remove("active-filter");
     } else {
       activeStatusFilter = status;
+    }
 
-      // remove highlight from others
-      document
-        .querySelectorAll(".kpi-card")
-        .forEach(c => c.classList.remove("active-filter"));
+    // UI highlight
+    document.querySelectorAll(".kpi-card")
+      .forEach(c => c.classList.remove("active-filter"));
 
+    if (activeStatusFilter !== null) {
       card.classList.add("active-filter");
     }
 
@@ -659,7 +659,23 @@ function renderTasks() {
     if (!Array.isArray(t.owner) || !t.owner.includes(owner)) return;
 
     // ✅ status filter
-    if (activeStatusFilter && t.status !== activeStatusFilter) return;
+    // ===== STATUS FILTER =====
+    if (activeStatusFilter) {
+
+      // Overdue حالة خاصة
+      if (activeStatusFilter === "Overdue") {
+        if (
+          t.status === "Completed" ||
+          !t.due ||
+          toISODate(t.due) >= today
+        ) return;
+      }
+
+      // باقي الحالات العادية
+      else {
+        if (t.status !== activeStatusFilter) return;
+      }
+    }
 
     const card = document.createElement("div");
     card.className = "task-card";
