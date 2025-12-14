@@ -19,6 +19,7 @@ let selectedManager = managers[0].name;
 let tasks = [];
 let editingIndex = null;
 let currentTaskIndex = null;
+let exportCsvBtn;
 
 /* ✅ NEW: flag to avoid re-forcing checkboxes while user interacts */
 let ownersInitialized = false;
@@ -91,6 +92,7 @@ function bindDOM() {
   kpiProgress = document.getElementById("kpiProgress");
   kpiReview = document.getElementById("kpiReview");
   kpiOverdue = document.getElementById("kpiOverdue");
+  exportCsvBtn = document.getElementById("exportCsvBtn");
 }
 
 function bindEvents() {
@@ -117,6 +119,7 @@ function bindEvents() {
   updateTaskBtn.onclick = () => openForm(tasks[currentTaskIndex], currentTaskIndex);
   completeTaskBtn.onclick = toggleComplete;
   deleteTaskBtn.onclick = deleteTask;
+  exportCsvBtn.onclick = exportMyTasksToCSV;
 }
 
 /* ================= HELPERS ================= */
@@ -218,6 +221,53 @@ function getStatusPerOwner() {
   });
 
   return result;
+}
+
+function exportMyTasksToCSV() {
+  const owner = MY_USER;
+
+  const filteredTasks = tasks.filter(
+    t => Array.isArray(t.owner) && t.owner.includes(owner)
+  );
+
+  if (filteredTasks.length === 0) {
+    alert("No tasks to export");
+    return;
+  }
+
+  const headers = [
+    "Title",
+    "Start Date",
+    "Due Date",
+    "Status",
+    "Owners",
+    "Description",
+    "Link"
+  ];
+
+  const rows = filteredTasks.map(t => [
+    `"${t.title || ""}"`,
+    `"${t.startDate || ""}"`,
+    `"${t.due || ""}"`,
+    `"${t.status || ""}"`,
+    `"${(t.owner || []).join(", ")}"`,
+    `"${(t.description || "").replace(/"/g, '""')}"`,
+    `"${t.link || ""}"`
+  ]);
+
+  const csvContent =
+    headers.join(",") + "\n" +
+    rows.map(r => r.join(",")).join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `my_tasks_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+
+  URL.revokeObjectURL(url);
 }
 
 /* ================= CHARTS ================= */
@@ -692,6 +742,7 @@ function switchToMyView() {
   selectedManager = MY_USER;
 
   backBtn.style.display = "block";
+  exportCsvBtn.style.display = "flex";
   managersFooter.style.display = "none";
   document.getElementById("myAnalytics").style.display = "block";
 
@@ -708,6 +759,7 @@ function switchToDashboardView() {
 
   backBtn.style.display = "none";
   managersFooter.style.display = "block";
+  exportCsvBtn.style.display = "none";
   document.getElementById("myAnalytics").style.display = "none";
 
   renderAll();

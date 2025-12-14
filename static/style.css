@@ -610,3 +610,20 @@
   .owner-checklist input{
     accent-color:#507A49;
   }
+
+  .icon-btn.csv {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    border: 1.5px solid #507A49;
+    background: transparent;
+    color: #507A49;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .icon-btn.csv:hover {
+    background: rgba(80,122,73,0.1);
+  }
