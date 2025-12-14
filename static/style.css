@@ -313,7 +313,7 @@
   }
   
   .manager-name{
-    text-transform: capitalize;
+  
     font-size:15px;
     font-weight:900;
     color:var(--green-deep);
@@ -323,6 +323,13 @@
     -webkit-box-orient:vertical;
     overflow:hidden;
   }
+
+  .manager-name,
+.task-meta,
+.modal-owner,
+.owner-name {
+  text-transform: capitalize;
+}
   
   .manager-title{
     font-size:12px;
