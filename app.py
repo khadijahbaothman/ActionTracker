@@ -4,7 +4,14 @@ import os
 
 app = Flask(__name__)
 
-DATA_FILE = "/data/tasks.json"
+DATA_FILE = "/var/data/tasks.json"
+
+
+os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
+
+if not os.path.exists(DATA_FILE):
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump({"tasks": []}, f, ensure_ascii=False, indent=2)
 
 
 def load_tasks():
