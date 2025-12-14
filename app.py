@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-DATA_FILE = "/var/data/tasks.json"
+DATA_FILE = "/data/tasks.json"
 
 
 os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
