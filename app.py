@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-DATA_FILE = "tasks.json"
+DATA_FILE = "/data/tasks.json"
 
 
 def load_tasks():
