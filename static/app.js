@@ -11,7 +11,7 @@ const managers = [
   { name: "Waad R. Binhimd", title: "Corporate Affairs", img: "/static/images/Waad.jpeg" },
   { name: "ABDULLAH AL-MUTAIRI", title: "Local Stations Director", img: "/static/images/ABDULLAH AWADULLAH AL-MUTAIRI.png" },
   { name: "BADER AL-HASNAN", title: "RUH Station Senior Director", img: "/static/images/BADER ALI KHALIFAH AL-HASNAN.png" },
-  { name: "MOHAMMED BIN SURAYA", title: "JED Station Senior Director", img: "/static/images/MOHAMMED BIN SURAYA.png" },
+  { name: "Mohammed Bin-Suraya", title: "JED Station Senior Director", img: "/static/images/MOHAMMED BIN SURAYA.png" },
   { name: "RAMZI AL-SHEHRI", title: "MED Station Director", img: "/static/images/RAMZI AL-SHEHRI.png" },
   { name: "Mansour Alamoudi", title: "DMM Station Director", img: "/static/images/sgslogo.png" },
   { name: "AYMAN NAGSHABANDI", title: "Fleet & Mobility Solutions Director", img: "/static/images/sgslogo.png" }
