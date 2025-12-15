@@ -779,6 +779,5 @@ input[type="date"] {
 }
 
 .owner-checklist {
-  max-height: calc(42px * 6);
   overflow-y: auto;
 }
