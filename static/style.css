@@ -744,3 +744,36 @@ input[type="date"] {
   background: rgba(239, 68, 68, 0.15);
   color: #EF4444;
 }
+
+/* ===== Responsible checklist scroll ===== */
+.owner-checklist {
+  max-height: 260px;      /* تقريبًا 6 عناصر */
+  overflow-y: auto;
+  padding-right: 6px;    /* مسافة عشان السكروول */
+}
+
+/* تحسين شكل السكرول (اختياري وجميل) */
+.owner-checklist::-webkit-scrollbar {
+  width: 6px;
+}
+
+.owner-checklist::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.owner-checklist::-webkit-scrollbar-thumb {
+  background-color: rgba(80, 122, 73, 0.4); /* أخضر هادي */
+  border-radius: 6px;
+}
+
+/* كل عنصر */
+.owner-checklist label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f6f8f4;
+  cursor: pointer;
+}
