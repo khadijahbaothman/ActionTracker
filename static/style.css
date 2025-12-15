@@ -777,3 +777,8 @@ input[type="date"] {
   background: #f6f8f4;
   cursor: pointer;
 }
+
+.owner-checklist {
+  max-height: calc(42px * 6);
+  overflow-y: auto;
+}
