@@ -747,7 +747,7 @@ input[type="date"] {
 
 /* ===== Responsible checklist scroll ===== */
 .owner-checklist {
-  max-height: 260px;      /* تقريبًا 6 عناصر */
+  max-height: 160px;      /* تقريبًا 6 عناصر */
   overflow-y: auto;
   padding-right: 6px;    /* مسافة عشان السكروول */
 }
