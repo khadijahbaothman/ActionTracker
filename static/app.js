@@ -2,6 +2,7 @@ const API_URL = "/api/tasks";
 
 /* ================= MANAGERS ================= */
 const managers = [
+  { name: "Nawaf Alharbi", title: "OPPM Director", img: "/static/images/NAWAF.jpeg" },
   { name: "Waleed Ali", title: "Vice President Commercial", img: "/static/images/waleed.png" },
   { name: "Sultan Darwish", title: "EVP Strategy", img: "/static/images/sultan.png" },
   { name: "Ahmed Alzahri", title: "VP HR", img: "/static/images/ahmed.png" },
@@ -12,7 +13,6 @@ const managers = [
   { name: "BADER AL-HASNAN", title: "RUH Station Senior Director", img: "/static/images/BADER ALI KHALIFAH AL-HASNAN.png" },
   { name: "MOHAMMED BIN SURAYA", title: "JED Station Senior Director", img: "/static/images/MOHAMMED BIN SURAYA.png" },
   { name: "RAMZI AL-SHEHRI", title: "MED Station Director", img: "/static/images/RAMZI AL-SHEHRI.png" },
-  { name: "Nawaf Alharbi", title: "OPPM Director", img: "/static/images/NAWAF.jpeg" },
   { name: "Mansour Alamoudi", title: "DMM Station Director", img: "/static/images/sgslogo.png" },
   { name: "AYMAN NAGSHABANDI", title: "Fleet & Mobility Solutions Director", img: "/static/images/sgslogo.png" }
 
