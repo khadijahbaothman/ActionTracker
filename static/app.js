@@ -15,7 +15,6 @@ const managers = [
   { name: "RAMZI AL-SHEHRI", title: "MED Station Director", img: "/static/images/RAMZI AL-SHEHRI.png" },
   { name: "Mansour Alamoudi", title: "DMM Station Director", img: "/static/images/sgslogo.png" },
   { name: "AYMAN NAGSHABANDI", title: "Fleet & Mobility Solutions Director", img: "/static/images/sgslogo.png" }
-
 ];
 
 const MY_USER = "Omar Alamoudi";
@@ -29,7 +28,7 @@ let currentTaskIndex = null;
 let exportCsvBtn;
 let activeStatusFilter = null; // null = no filter
 
-/* ✅ NEW: flag to avoid re-forcing checkboxes while user interacts */
+/* ✅ flag to avoid re-forcing checkboxes while user interacts */
 let ownersInitialized = false;
 
 /* ================= DOM ================= */
@@ -49,35 +48,16 @@ let kpiTotal, kpiCompleted, kpiProgress, kpiReview, kpiOverdue;
 let ownersChartInstance = null;
 let statusChartInstance = null;
 let upcomingLineChartInstance = null;
+let ownersOverviewChartInstance = null;
 
+/* ================= INIT ================= */
 document.addEventListener("DOMContentLoaded", () => {
   bindDOM();
   bindEvents();
+  bindKpiFilterEvents(); // ✅ moved here (fix: buttons not clickable if script loaded early)
   loadTasks();
 });
 
-document.querySelectorAll(".kpi-card").forEach(card => {
-  card.addEventListener("click", () => {
-    const status = card.dataset.status || null; // all = null
-
-    // toggle
-    if (activeStatusFilter === status) {
-      activeStatusFilter = null;
-    } else {
-      activeStatusFilter = status;
-    }
-
-    // UI highlight
-    document.querySelectorAll(".kpi-card")
-      .forEach(c => c.classList.remove("active-filter"));
-
-    if (activeStatusFilter !== null) {
-      card.classList.add("active-filter");
-    }
-
-    renderTasks();
-  });
-});
 /* ================= BIND ================= */
 function bindDOM() {
   managersRow = document.getElementById("managersRow");
@@ -122,34 +102,110 @@ function bindDOM() {
   kpiProgress = document.getElementById("kpiProgress");
   kpiReview = document.getElementById("kpiReview");
   kpiOverdue = document.getElementById("kpiOverdue");
+
   exportCsvBtn = document.getElementById("exportCsvBtn");
 }
 
 function bindEvents() {
-  addBtn.onclick = () => openForm();
-  myTasksBtn.onclick = switchToMyView;
-  backBtn.onclick = switchToDashboardView;
+  if (addBtn) addBtn.onclick = () => openForm();
+  if (myTasksBtn) myTasksBtn.onclick = switchToMyView;
+  if (backBtn) backBtn.onclick = switchToDashboardView;
 
-  modalClose.onclick = () => (modalBackdrop.style.display = "none");
-  modalBackdrop.onclick = e => e.target === modalBackdrop && (modalBackdrop.style.display = "none");
+  if (modalClose) modalClose.onclick = () => (modalBackdrop.style.display = "none");
+  if (modalBackdrop) {
+    modalBackdrop.onclick = e => e.target === modalBackdrop && (modalBackdrop.style.display = "none");
+  }
 
   // ✅ close form + reset flag
-  formClose.onclick = () => {
-    formBackdrop.style.display = "none";
-    ownersInitialized = false;
-  };
-  formBackdrop.onclick = e => {
-    if (e.target === formBackdrop) {
+  if (formClose) {
+    formClose.onclick = () => {
       formBackdrop.style.display = "none";
       ownersInitialized = false;
-    }
-  };
+    };
+  }
+  if (formBackdrop) {
+    formBackdrop.onclick = e => {
+      if (e.target === formBackdrop) {
+        formBackdrop.style.display = "none";
+        ownersInitialized = false;
+      }
+    };
+  }
 
-  saveTaskBtn.onclick = saveTask;
-  updateTaskBtn.onclick = () => openForm(tasks[currentTaskIndex], currentTaskIndex);
-  completeTaskBtn.onclick = toggleComplete;
-  deleteTaskBtn.onclick = deleteTask;
-  exportCsvBtn.onclick = exportMyTasksToCSV;
+  if (saveTaskBtn) saveTaskBtn.onclick = saveTask;
+
+  if (updateTaskBtn) updateTaskBtn.onclick = () => openForm(tasks[currentTaskIndex], currentTaskIndex);
+  if (completeTaskBtn) completeTaskBtn.onclick = toggleComplete;
+  if (deleteTaskBtn) deleteTaskBtn.onclick = deleteTask;
+
+  if (exportCsvBtn) exportCsvBtn.onclick = exportMyTasksToCSV;
+}
+
+function bindKpiFilterEvents() {
+  document.querySelectorAll(".kpi-card").forEach(card => {
+    card.addEventListener("click", () => {
+      const status = card.dataset.status || null; // all = null
+
+      // toggle
+      if (activeStatusFilter === status) activeStatusFilter = null;
+      else activeStatusFilter = status;
+
+      // UI highlight
+      document.querySelectorAll(".kpi-card").forEach(c => c.classList.remove("active-filter"));
+      if (activeStatusFilter !== null) card.classList.add("active-filter");
+
+      renderTasks();
+    });
+  });
+}
+
+/* ================= SECURITY HELPERS ================= */
+function safeText(value) {
+  return value == null ? "" : String(value);
+}
+
+function safeUrl(raw) {
+  if (!raw) return "";
+  const s = String(raw).trim();
+  try {
+    // allow absolute http(s) or same-origin relative
+    if (s.startsWith("/")) return s;
+    const u = new URL(s, window.location.origin);
+    if (u.protocol === "http:" || u.protocol === "https:") return u.href;
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+/* ================= CSRF (client-side support) ================= */
+function getCsrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  if (meta && meta.content) return meta.content;
+
+  // optional: read from cookie "csrf_token" or "csrf"
+  const m = document.cookie.match(/(?:^|;\s*)(csrf_token|csrf)=([^;]+)/i);
+  if (m) return decodeURIComponent(m[2]);
+  return "";
+}
+
+function fetchJSON(url, options = {}) {
+  const headers = new Headers(options.headers || {});
+  headers.set("Accept", "application/json");
+
+  // only attach JSON content-type if we have body
+  if (options.body != null && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  // attach CSRF token for state-changing requests if present
+  const method = (options.method || "GET").toUpperCase();
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    const csrf = getCsrfToken();
+    if (csrf) headers.set("X-CSRFToken", csrf);
+  }
+
+  return fetch(url, { ...options, headers });
 }
 
 /* ================= HELPERS ================= */
@@ -164,32 +220,30 @@ function toISODate(value) {
 
 /* ================= API ================= */
 async function loadTasks() {
-  const res = await fetch(API_URL);
+  const res = await fetchJSON(API_URL);
   const data = await res.json();
   tasks = Array.isArray(data.tasks) ? data.tasks : [];
   renderAll();
 }
 
 async function addTaskAPI(task) {
-  await fetch(API_URL, {
+  await fetchJSON(API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(task)
   });
   await loadTasks();
 }
 
 async function updateTaskAPI(task, index) {
-  await fetch(`${API_URL}/${index}`, {
+  await fetchJSON(`${API_URL}/${index}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(task)
   });
   await loadTasks();
 }
 
 async function deleteTaskAPI(index) {
-  await fetch(`${API_URL}/${index}`, { method: "DELETE" });
+  await fetchJSON(`${API_URL}/${index}`, { method: "DELETE" });
   await loadTasks();
 }
 
@@ -209,13 +263,7 @@ function getStatsForOwner(owner) {
 
 function getGlobalStats() {
   const today = new Date().toISOString().split("T")[0];
-  let stats = {
-    total: 0,
-    completed: 0,
-    inProgress: 0,
-    underReview: 0,
-    overdue: 0
-  };
+  const stats = { total: 0, completed: 0, inProgress: 0, underReview: 0, overdue: 0 };
 
   tasks.forEach(t => {
     stats.total++;
@@ -224,11 +272,7 @@ function getGlobalStats() {
     if (t.status === "In Progress") stats.inProgress++;
     if (t.status === "Under Review") stats.underReview++;
 
-    if (
-      t.status !== "Completed" &&
-      t.due &&
-      toISODate(t.due) < today
-    ) {
+    if (t.status !== "Completed" && t.due && toISODate(t.due) < today) {
       stats.overdue++;
     }
   });
@@ -240,7 +284,7 @@ function getTasksPerOwner() {
   const counts = {};
   tasks.forEach(t => {
     const owners = Array.isArray(t.owner) ? t.owner : [t.owner];
-    owners.forEach(o => counts[o] = (counts[o] || 0) + 1);
+    owners.forEach(o => (counts[o] = (counts[o] || 0) + 1));
   });
   return counts;
 }
@@ -263,42 +307,29 @@ function getStatusPerOwner() {
   return result;
 }
 
+/* ================= EXPORT ================= */
 function exportMyTasksToCSV() {
   const owner = MY_USER;
 
-  const filteredTasks = tasks.filter(
-    t => Array.isArray(t.owner) && t.owner.includes(owner)
-  );
-
+  const filteredTasks = tasks.filter(t => Array.isArray(t.owner) && t.owner.includes(owner));
   if (filteredTasks.length === 0) {
     alert("No tasks to export");
     return;
   }
 
-  const headers = [
-    "Title",
-    "Start Date",
-    "Due Date",
-    "Status",
-    "Owners",
-    "Description",
-    "Link"
-  ];
+  const headers = ["Title", "Start Date", "Due Date", "Status", "Owners", "Description", "Link"];
 
   const rows = filteredTasks.map(t => [
-    `"${t.title || ""}"`,
-    `"${t.startDate || ""}"`,
-    `"${t.due || ""}"`,
-    `"${t.status || ""}"`,
-    `"${(t.owner || []).join(", ")}"`,
-    `"${(t.description || "").replace(/"/g, '""')}"`,
-    `"${t.link || ""}"`
+    `"${safeText(t.title).replace(/"/g, '""')}"`,
+    `"${safeText(t.startDate)}"`,
+    `"${safeText(t.due)}"`,
+    `"${safeText(t.status)}"`,
+    `"${(Array.isArray(t.owner) ? t.owner : []).join(", ").replace(/"/g, '""')}"`,
+    `"${safeText(t.description).replace(/"/g, '""')}"`,
+    `"${safeText(t.link).replace(/"/g, '""')}"`
   ]);
 
-  const csvContent =
-    headers.join(",") + "\n" +
-    rows.map(r => r.join(",")).join("\n");
-
+  const csvContent = headers.join(",") + "\n" + rows.map(r => r.join(",")).join("\n");
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
 
@@ -317,7 +348,7 @@ function renderOwnersChart() {
   const values = Object.values(data);
 
   const canvas = document.getElementById("ownersChart");
-  if (!canvas) return;
+  if (!canvas || typeof Chart === "undefined") return;
 
   if (ownersChartInstance) ownersChartInstance.destroy();
 
@@ -336,12 +367,11 @@ function renderOwnersChart() {
 function renderStatusChart() {
   const data = getStatusPerOwner();
   const labels = Object.keys(data);
-
   const inProgress = labels.map(o => data[o].inProgress);
   const overdue = labels.map(o => data[o].overdue);
 
   const canvas = document.getElementById("statusChart");
-  if (!canvas) return;
+  if (!canvas || typeof Chart === "undefined") return;
 
   if (statusChartInstance) statusChartInstance.destroy();
 
@@ -350,32 +380,18 @@ function renderStatusChart() {
     data: {
       labels,
       datasets: [
-        {
-          label: "In Progress",
-          data: inProgress,
-          backgroundColor: "#3B82F6",   // أزرق هادي
-          borderRadius: 6
-        },
-        {
-          label: "Overdue",
-          data: overdue,
-          backgroundColor: "#EF4444",   // أحمر هادي
-          borderRadius: 6
-        }
+        { label: "In Progress", data: inProgress, backgroundColor: "#3B82F6", borderRadius: 6 },
+        { label: "Overdue", data: overdue, backgroundColor: "#EF4444", borderRadius: 6 }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { position: "top" } },
-      scales: {
-        x: { stacked: true },
-        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } }
-      }
+      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } }
     }
   });
 }
-
 
 function getOwnerOverviewData() {
   const today = new Date().toISOString().split("T")[0];
@@ -383,37 +399,20 @@ function getOwnerOverviewData() {
 
   tasks.forEach(t => {
     const owners = Array.isArray(t.owner) ? t.owner : [t.owner];
-
     owners.forEach(o => {
-      if (!result[o]) {
-        result[o] = {
-          planned: 0,
-          inProgress: 0,
-          review: 0,
-          completed: 0,
-          overdue: 0
-        };
-      }
+      if (!result[o]) result[o] = { planned: 0, inProgress: 0, review: 0, completed: 0, overdue: 0 };
 
       if (t.status === "Planned") result[o].planned++;
       if (t.status === "In Progress") result[o].inProgress++;
       if (t.status === "Under Review") result[o].review++;
       if (t.status === "Completed") result[o].completed++;
 
-      if (
-        t.status !== "Completed" &&
-        t.due &&
-        toISODate(t.due) < today
-      ) {
-        result[o].overdue++;
-      }
+      if (t.status !== "Completed" && t.due && toISODate(t.due) < today) result[o].overdue++;
     });
   });
 
   return result;
 }
-
-let ownersOverviewChartInstance = null;
 
 function renderOwnersOverviewChart() {
   const data = getOwnerOverviewData();
@@ -426,73 +425,27 @@ function renderOwnersOverviewChart() {
   const overdue = labels.map(o => data[o].overdue);
 
   const canvas = document.getElementById("ownersOverviewChart");
-  if (!canvas) return;
+  if (!canvas || typeof Chart === "undefined") return;
 
-  if (ownersOverviewChartInstance) {
-    ownersOverviewChartInstance.destroy();
-  }
+  if (ownersOverviewChartInstance) ownersOverviewChartInstance.destroy();
 
   ownersOverviewChartInstance = new Chart(canvas, {
     type: "bar",
     data: {
       labels,
       datasets: [
-        {
-          label: "Planned",
-          data: planned,
-          backgroundColor: "rgba(148,163,184,0.35)",
-          borderColor: "#94A3B8",
-          borderWidth: 2,
-          borderRadius: 6
-        },
-        {
-          label: "In Progress",
-          data: inProgress,
-          backgroundColor: "rgba(59,130,246,0.35)",
-          borderColor: "#3B82F6",
-          borderWidth: 2,
-          borderRadius: 6
-        },
-        {
-          label: "Under Review",
-          data: review,
-          backgroundColor: "rgba(167,139,250,0.35)",
-          borderColor: "#A78BFA",
-          borderWidth: 2,
-          borderRadius: 6
-        },
-        {
-          label: "Completed",
-          data: completed,
-          backgroundColor: "rgba(34,197,94,0.35)",
-          borderColor: "#22C55E",
-          borderWidth: 2,
-          borderRadius: 6
-        },
-        {
-          label: "Overdue",
-          data: overdue,
-          backgroundColor: "rgba(239,68,68,0.35)",
-          borderColor: "#EF4444",
-          borderWidth: 2,
-          borderRadius: 6
-        }
+        { label: "Planned", data: planned, backgroundColor: "rgba(148,163,184,0.35)", borderColor: "#94A3B8", borderWidth: 2, borderRadius: 6 },
+        { label: "In Progress", data: inProgress, backgroundColor: "rgba(59,130,246,0.35)", borderColor: "#3B82F6", borderWidth: 2, borderRadius: 6 },
+        { label: "Under Review", data: review, backgroundColor: "rgba(167,139,250,0.35)", borderColor: "#A78BFA", borderWidth: 2, borderRadius: 6 },
+        { label: "Completed", data: completed, backgroundColor: "rgba(34,197,94,0.35)", borderColor: "#22C55E", borderWidth: 2, borderRadius: 6 },
+        { label: "Overdue", data: overdue, backgroundColor: "rgba(239,68,68,0.35)", borderColor: "#EF4444", borderWidth: 2, borderRadius: 6 }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      scales: {
-        x: { stacked: true },
-        y: {
-          stacked: true,
-          beginAtZero: true,
-          ticks: { stepSize: 1 }
-        }
-      },
-      plugins: {
-        legend: { position: "top" }
-      }
+      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } },
+      plugins: { legend: { position: "top" } }
     }
   });
 }
@@ -501,7 +454,7 @@ function getUpcomingTasksByWeek(weeksAhead = 10) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // بداية الأسبوع (Monday)
+  // Monday as start
   const startOfWeek = new Date(today);
   const day = startOfWeek.getDay();
   const diff = (day === 0 ? -6 : 1) - day;
@@ -519,13 +472,10 @@ function getUpcomingTasksByWeek(weeksAhead = 10) {
     weekEnd.setDate(weekStart.getDate() + 6);
 
     const monthName = weekStart.toLocaleString("en-US", { month: "short" });
-    const weekNumberInMonth = Math.ceil(
-      (weekStart.getDate() + weekStart.getDay()) / 7
-    );
-
+    const weekNumberInMonth = Math.ceil((weekStart.getDate() + weekStart.getDay()) / 7);
     const label = `${monthName} - Week ${weekNumberInMonth}`;
-    labels.push(label);
 
+    labels.push(label);
     details[label] = [];
 
     tasks.forEach(t => {
@@ -534,9 +484,7 @@ function getUpcomingTasksByWeek(weeksAhead = 10) {
       const dueDate = new Date(toISODate(t.due));
       dueDate.setHours(0, 0, 0, 0);
 
-      if (dueDate >= weekStart && dueDate <= weekEnd) {
-        details[label].push(t);
-      }
+      if (dueDate >= weekStart && dueDate <= weekEnd) details[label].push(t);
     });
 
     counts.push(details[label].length);
@@ -548,7 +496,7 @@ function getUpcomingTasksByWeek(weeksAhead = 10) {
 function renderUpcomingLineChart() {
   const data = getUpcomingTasksByWeek(10);
   const canvas = document.getElementById("upcomingLineChart");
-  if (!canvas) return;
+  if (!canvas || typeof Chart === "undefined") return;
 
   if (upcomingLineChartInstance) upcomingLineChartInstance.destroy();
 
@@ -577,20 +525,12 @@ function renderUpcomingLineChart() {
             label: function (ctx) {
               const week = ctx.label;
               const list = data.details[week] || [];
-
-              return list.map(t =>
-                `• ${t.title} (${(t.owner || []).join(", ")})`
-              );
+              return list.map(t => `• ${safeText(t.title)} (${(Array.isArray(t.owner) ? t.owner : []).join(", ")})`);
             }
           }
         }
       },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: { stepSize: 1 }
-        }
-      }
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
     }
   });
 }
@@ -600,9 +540,14 @@ function renderAll() {
   renderManagers();
   renderTasks();
   renderKPI();
+  // optional
+  // renderOwnersChart();
+  // renderStatusChart();
 }
 
 function renderManagers() {
+  if (!managersRow || !managersFooter) return;
+
   if (currentView === "my") {
     managersFooter.style.display = "none";
     return;
@@ -618,8 +563,8 @@ function renderManagers() {
 
     card.innerHTML = `
       <img class="manager-avatar" src="${m.img}">
-      <div class="manager-name">${m.name}</div>
-      <div class="manager-title">${m.title}</div>
+      <div class="manager-name">${safeText(m.name)}</div>
+      <div class="manager-title">${safeText(m.title)}</div>
       <div class="manager-stats-grid">
         <div class="stat-box all"><span class="stat-num">${s.total}</span><span class="stat-label">All</span></div>
         <div class="stat-box progress"><span class="stat-num">${s.inProgress}</span><span class="stat-label">Prog</span></div>
@@ -638,12 +583,13 @@ function renderManagers() {
 }
 
 function renderTasks() {
+  if (!tasksGrid || !completedGrid) return;
+
   tasksGrid.innerHTML = "";
   completedGrid.innerHTML = "";
 
   const owner = currentView === "my" ? MY_USER : selectedManager;
   const today = new Date().toISOString().split("T")[0];
-
 
   const statusOrder = {
     "Planned": 1,
@@ -653,53 +599,44 @@ function renderTasks() {
     "Completed": 5
   };
 
-  const sortedTasks = [...tasks].sort((a, b) => {
-    return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
-  });
+  const sortedTasks = [...tasks].sort((a, b) => (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99));
 
   sortedTasks.forEach((t, i) => {
     if (!Array.isArray(t.owner) || !t.owner.includes(owner)) return;
 
-    // ✅ status filter
-    // ===== STATUS FILTER =====
+    // STATUS FILTER
     if (activeStatusFilter) {
-
-      // Overdue حالة خاصة
       if (activeStatusFilter === "Overdue") {
-        if (
-          t.status === "Completed" ||
-          !t.due ||
-          toISODate(t.due) >= today
-        ) return;
-      }
-
-      // باقي الحالات العادية
-      else {
+        if (t.status === "Completed" || !t.due || toISODate(t.due) >= today) return;
+      } else {
         if (t.status !== activeStatusFilter) return;
       }
     }
 
     const card = document.createElement("div");
     card.className = "task-card";
+
     if (t.status !== "Completed" && t.due && toISODate(t.due) < today) card.classList.add("overdue");
 
+    const statusCls = `status-${safeText(t.status).replace(/\s+/g, "-").toLowerCase()}`;
+
     card.innerHTML = `
-    <div class="status-badge status-${t.status.replace(" ", "-").toLowerCase()}">
-    ${t.status}
-  </div>
-      <div class="task-title">${t.title}</div>
-      <div class="task-meta">Start: ${t.startDate || "-"}</div>
-      <div class="task-meta">Due: ${toISODate(t.due) || "-"}</div>
-      <div class="task-meta">Owner: ${(t.owner || []).join(", ")}</div>
+      <div class="status-badge ${statusCls}">${safeText(t.status)}</div>
+      <div class="task-title">${safeText(t.title)}</div>
+      <div class="task-meta">Start: ${safeText(t.startDate || "-")}</div>
+      <div class="task-meta">Due: ${safeText(toISODate(t.due) || "-")}</div>
+      <div class="task-meta">Owner: ${(Array.isArray(t.owner) ? t.owner : []).join(", ")}</div>
     `;
 
     card.onclick = () => openViewModal(t, i);
 
-    t.status === "Completed" ? completedGrid.appendChild(card) : tasksGrid.appendChild(card);
+    (t.status === "Completed" ? completedGrid : tasksGrid).appendChild(card);
   });
 }
 
 function renderKPI() {
+  if (!kpiTotal || !kpiCompleted || !kpiProgress || !kpiReview || !kpiOverdue) return;
+
   const s = currentView === "my" ? getGlobalStats() : getStatsForOwner(selectedManager);
   kpiTotal.textContent = s.total;
   kpiCompleted.textContent = s.completed;
@@ -711,33 +648,44 @@ function renderKPI() {
 /* ================= MODALS ================= */
 function openViewModal(task, index) {
   currentTaskIndex = index;
+  if (!modalBackdrop) return;
+
   modalBackdrop.style.display = "flex";
 
-  modalTitle.textContent = task.title;
-  modalStart.textContent = "Start: " + (task.startDate || "-");
-  modalDue.textContent = "Due: " + (toISODate(task.due) || "-");
-  modalOwner.textContent = "Owner: " + (task.owner || []).join(", ");
-  modalStatus.textContent = "Status: " + task.status;
+  if (modalTitle) modalTitle.textContent = safeText(task.title);
+  if (modalStart) modalStart.textContent = "Start: " + safeText(task.startDate || "-");
+  if (modalDue) modalDue.textContent = "Due: " + safeText(toISODate(task.due) || "-");
+  if (modalOwner) modalOwner.textContent = "Owner: " + (Array.isArray(task.owner) ? task.owner.join(", ") : "");
+  if (modalStatus) modalStatus.textContent = "Status: " + safeText(task.status);
 
-  modalDesc.innerHTML = `
-    ${task.description || ""}<br>
-    ${task.link ? `<a href="${task.link}" target="_blank">Open link</a>` : ""}
-  `;
+  // ✅ FIX XSS: never use innerHTML with untrusted data
+  if (modalDesc) {
+    modalDesc.textContent = safeText(task.description || "");
 
-  completeTaskBtn.innerHTML =
-    task.status === "Completed"
-      ? `<i class="fas fa-rotate-left"></i> Reopen`
-      : `<i class="fas fa-check-circle"></i> Complete`;
+    const link = safeUrl(task.link);
+    if (link) {
+      const br = document.createElement("br");
+      const a = document.createElement("a");
+      a.href = link;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer"; // ✅ fixes unsafe target=_blank  [oai_citation:3‡Action Tracker SAST.pdf](sediment://file_00000000c64471f49e008323bed4646b)
+      a.textContent = "Open link";
+      modalDesc.appendChild(br);
+      modalDesc.appendChild(a);
+    }
+  }
 }
 
-/* ✅ UPDATED: openForm (allow add/remove freely) */
+/* ================= FORM ================= */
 function openForm(task = null, index = null) {
+  if (!formBackdrop || !taskOwnerChecklist) return;
+
   formBackdrop.style.display = "flex";
   editingIndex = index;
 
   const owners = [...managers.map(m => m.name), MY_USER];
 
-  // ✅ Build checklist only once per open
+  // Build checklist only once per open
   if (!ownersInitialized) {
     taskOwnerChecklist.innerHTML = "";
 
@@ -747,15 +695,14 @@ function openForm(task = null, index = null) {
       if (task) {
         checked = Array.isArray(task.owner) && task.owner.includes(name);
       } else {
-        // default checks (only at first open)
         if (name === MY_USER) checked = true;
         if (name === selectedManager) checked = true;
       }
 
       const label = document.createElement("label");
       label.innerHTML = `
-        <input type="checkbox" value="${name}" ${checked ? "checked" : ""}>
-        ${name}
+        <input type="checkbox" value="${safeText(name)}" ${checked ? "checked" : ""}>
+        ${safeText(name)}
       `;
       taskOwnerChecklist.appendChild(label);
     });
@@ -764,24 +711,25 @@ function openForm(task = null, index = null) {
   }
 
   if (task) {
-    taskTitleInput.value = task.title || "";
-    taskDueInput.value = toISODate(task.due);
-    taskStatusInput.value = task.status || "Planned";
-    taskDescInput.value = task.description || "";
-    taskLinkInput.value = task.link || "";
+    if (taskTitleInput) taskTitleInput.value = safeText(task.title || "");
+    if (taskDueInput) taskDueInput.value = toISODate(task.due);
+    if (taskStatusInput) taskStatusInput.value = safeText(task.status || "Planned");
+    if (taskDescInput) taskDescInput.value = safeText(task.description || "");
+    if (taskLinkInput) taskLinkInput.value = safeText(task.link || "");
   } else {
-    taskTitleInput.value = "";
-    taskDueInput.value = "";
-    taskStatusInput.value = "Planned";
-    taskDescInput.value = "";
-    taskLinkInput.value = "";
+    if (taskTitleInput) taskTitleInput.value = "";
+    if (taskDueInput) taskDueInput.value = "";
+    if (taskStatusInput) taskStatusInput.value = "Planned";
+    if (taskDescInput) taskDescInput.value = "";
+    if (taskLinkInput) taskLinkInput.value = "";
   }
 }
 
 /* ================= SAVE / ACTIONS ================= */
 function saveTask() {
-  const owners = [...taskOwnerChecklist.querySelectorAll("input:checked")]
-    .map(i => i.value);
+  if (!taskOwnerChecklist || !taskTitleInput) return;
+
+  const owners = [...taskOwnerChecklist.querySelectorAll("input:checked")].map(i => i.value);
 
   if (!taskTitleInput.value.trim() || owners.length === 0) {
     alert("اختاري شخص واحد على الأقل");
@@ -793,31 +741,29 @@ function saveTask() {
   const task = {
     title: taskTitleInput.value.trim(),
     startDate: editingIndex !== null ? tasks[editingIndex].startDate : today,
-    due: toISODate(taskDueInput.value),
+    due: toISODate(taskDueInput ? taskDueInput.value : ""),
     owner: owners,
-    status: taskStatusInput.value,
-    description: taskDescInput.value,
-    link: taskLinkInput.value
+    status: taskStatusInput ? taskStatusInput.value : "Planned",
+    description: taskDescInput ? taskDescInput.value : "",
+    link: taskLinkInput ? taskLinkInput.value : ""
   };
 
-  editingIndex !== null ? updateTaskAPI(task, editingIndex) : addTaskAPI(task);
+  if (editingIndex !== null) updateTaskAPI(task, editingIndex);
+  else addTaskAPI(task);
 
-  formBackdrop.style.display = "none";
-  ownersInitialized = false; // ✅ reset for next open
+  if (formBackdrop) formBackdrop.style.display = "none";
+  ownersInitialized = false;
 }
 
 function toggleComplete() {
   const t = tasks[currentTaskIndex];
-  updateTaskAPI(
-    { ...t, status: t.status === "Completed" ? "In Progress" : "Completed" },
-    currentTaskIndex
-  );
-  modalBackdrop.style.display = "none";
+  updateTaskAPI({ ...t, status: t.status === "Completed" ? "In Progress" : "Completed" }, currentTaskIndex);
+  if (modalBackdrop) modalBackdrop.style.display = "none";
 }
 
 function deleteTask() {
   deleteTaskAPI(currentTaskIndex);
-  modalBackdrop.style.display = "none";
+  if (modalBackdrop) modalBackdrop.style.display = "none";
 }
 
 /* ================= VIEW ================= */
@@ -825,14 +771,15 @@ function switchToMyView() {
   currentView = "my";
   selectedManager = MY_USER;
 
-  backBtn.style.display = "block";
-  exportCsvBtn.style.display = "flex";
-  managersFooter.style.display = "none";
-  document.getElementById("myAnalytics").style.display = "block";
+  if (backBtn) backBtn.style.display = "block";
+  if (exportCsvBtn) exportCsvBtn.style.display = "flex";
+  if (managersFooter) managersFooter.style.display = "none";
+
+  const analytics = document.getElementById("myAnalytics");
+  if (analytics) analytics.style.display = "block";
 
   renderTasks();
   renderKPI();
-
   renderOwnersOverviewChart();
   renderUpcomingLineChart();
 }
@@ -841,10 +788,12 @@ function switchToDashboardView() {
   currentView = "dashboard";
   selectedManager = managers[0].name;
 
-  backBtn.style.display = "none";
-  managersFooter.style.display = "block";
-  exportCsvBtn.style.display = "none";
-  document.getElementById("myAnalytics").style.display = "none";
+  if (backBtn) backBtn.style.display = "none";
+  if (managersFooter) managersFooter.style.display = "block";
+  if (exportCsvBtn) exportCsvBtn.style.display = "none";
+
+  const analytics = document.getElementById("myAnalytics");
+  if (analytics) analytics.style.display = "none";
 
   renderAll();
 }
