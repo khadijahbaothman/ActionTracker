@@ -1,5 +1,6 @@
 import os
 import json
+import bleach
 from flask import Flask, render_template, request, jsonify, abort
 
 app = Flask(__name__)
@@ -7,6 +8,22 @@ app = Flask(__name__)
 # ================= CONFIG =================
 DATA_FILE = os.environ.get("DATA_FILE", "data/tasks.json")
 
+# ================= SECURITY =================
+ALLOWED_TAGS = []
+ALLOWED_ATTRS = {}
+
+def sanitize_task(task):
+    fields_to_clean = ["title", "description", "link"]
+
+    for field in fields_to_clean:
+        if field in task and isinstance(task[field], str):
+            task[field] = bleach.clean(
+                task[field],
+                tags=ALLOWED_TAGS,
+                attributes=ALLOWED_ATTRS,
+                strip=True
+            )
+    return task
 
 # ================= HELPERS =================
 def ensure_data_dir():
@@ -25,7 +42,6 @@ def load_tasks():
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     except json.JSONDecodeError:
-        # لو الملف خربان
         return {"tasks": []}
 
 
@@ -44,14 +60,12 @@ def validate_task(task):
         return False
     return True
 
-
 # ================= ROUTES =================
 @app.route("/")
 def index():
     return render_template("index.html")
 
 
-# ---------- TASKS API ----------
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
     return jsonify(load_tasks())
@@ -65,6 +79,7 @@ def add_task():
     if not validate_task(task):
         return jsonify({"error": "Invalid task payload"}), 400
 
+    task = sanitize_task(task)  # ✅ XSS protection
     data["tasks"].append(task)
     save_tasks(data)
 
@@ -82,6 +97,7 @@ def update_task(index):
     if not validate_task(task):
         return jsonify({"error": "Invalid task payload"}), 400
 
+    task = sanitize_task(task)  # ✅ XSS protection
     data["tasks"][index] = task
     save_tasks(data)
 
