@@ -7,10 +7,8 @@ app = Flask(__name__)
 
 @app.after_request
 def add_security_headers(response):
-    # HSTS (يعتمد على HTTPS فقط)
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
-    # ✅ CSP قوي (مناسب لمعظم المشاريع)
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "base-uri 'self'; "
