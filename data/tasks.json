@@ -1,28 +1,3 @@
 {
-  "tasks": [
-    {
-      "title": "tt",
-      "startDate": "2026-01-11",
-      "due": "",
-      "owner": [
-        "Waleed Ali",
-        "Omar Alamoudi"
-      ],
-      "status": "Planned",
-      "description": "",
-      "link": ""
-    },
-    {
-      "title": "test",
-      "startDate": "2026-01-12",
-      "due": "",
-      "owner": [
-        "Nawaf Alharbi",
-        "Omar Alamoudi"
-      ],
-      "status": "Planned",
-      "description": "",
-      "link": ""
-    }
-  ]
+  "tasks": []
 }

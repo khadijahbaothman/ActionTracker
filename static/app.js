@@ -581,12 +581,29 @@ function renderManagers() {
     const statsGrid = document.createElement("div");
     statsGrid.className = "manager-stats-grid";
 
-    statsGrid.innerHTML = `
-  <div class="stat-box all"><span class="stat-num">${s.total}</span><span class="stat-label">All</span></div>
-  <div class="stat-box progress"><span class="stat-num">${s.inProgress}</span><span class="stat-label">Prog</span></div>
-  <div class="stat-box review"><span class="stat-num">${s.underReview}</span><span class="stat-label">Rev</span></div>
-  <div class="stat-box overdue"><span class="stat-num">${s.overdue}</span><span class="stat-label">Overdue</span></div>
-`;
+    statsGrid.innerHTML = "";
+
+    function makeStatBox(cls, num, labelText) {
+      const box = document.createElement("div");
+      box.className = `stat-box ${cls}`;
+
+      const numSpan = document.createElement("span");
+      numSpan.className = "stat-num";
+      numSpan.textContent = String(num);
+
+      const labelSpan = document.createElement("span");
+      labelSpan.className = "stat-label";
+      labelSpan.textContent = labelText;
+
+      box.appendChild(numSpan);
+      box.appendChild(labelSpan);
+      return box;
+    }
+
+    statsGrid.appendChild(makeStatBox("all", s.total, "All"));
+    statsGrid.appendChild(makeStatBox("progress", s.inProgress, "Prog"));
+    statsGrid.appendChild(makeStatBox("review", s.underReview, "Rev"));
+    statsGrid.appendChild(makeStatBox("overdue", s.overdue, "Overdue"));
 
     // assemble card
     card.appendChild(img);
@@ -745,10 +762,15 @@ function openForm(task = null, index = null) {
       }
 
       const label = document.createElement("label");
-      label.innerHTML = `
-        <input type="checkbox" value="${safeText(name)}" ${checked ? "checked" : ""}>
-        ${safeText(name)}
-      `;
+
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.value = safeText(name);
+      input.checked = checked;
+
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(" " + safeText(name)));
+
       taskOwnerChecklist.appendChild(label);
     });
 
