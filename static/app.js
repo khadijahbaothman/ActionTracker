@@ -561,17 +561,38 @@ function renderManagers() {
     const card = document.createElement("div");
     card.className = "manager-card" + (m.name === selectedManager ? " active" : "");
 
-    card.innerHTML = `
-      <img class="manager-avatar" src="${m.img}">
-      <div class="manager-name">${safeText(m.name)}</div>
-      <div class="manager-title">${safeText(m.title)}</div>
-      <div class="manager-stats-grid">
-        <div class="stat-box all"><span class="stat-num">${s.total}</span><span class="stat-label">All</span></div>
-        <div class="stat-box progress"><span class="stat-num">${s.inProgress}</span><span class="stat-label">Prog</span></div>
-        <div class="stat-box review"><span class="stat-num">${s.underReview}</span><span class="stat-label">Rev</span></div>
-        <div class="stat-box overdue"><span class="stat-num">${s.overdue}</span><span class="stat-label">Overdue</span></div>
-      </div>
-    `;
+    // avatar
+    const img = document.createElement("img");
+    img.className = "manager-avatar";
+    img.src = m.img;
+    img.alt = m.name;
+
+    // name
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "manager-name";
+    nameDiv.textContent = m.name;
+
+    // title
+    const titleDiv = document.createElement("div");
+    titleDiv.className = "manager-title";
+    titleDiv.textContent = m.title;
+
+    // stats grid (أرقام فقط = آمنة)
+    const statsGrid = document.createElement("div");
+    statsGrid.className = "manager-stats-grid";
+
+    statsGrid.innerHTML = `
+  <div class="stat-box all"><span class="stat-num">${s.total}</span><span class="stat-label">All</span></div>
+  <div class="stat-box progress"><span class="stat-num">${s.inProgress}</span><span class="stat-label">Prog</span></div>
+  <div class="stat-box review"><span class="stat-num">${s.underReview}</span><span class="stat-label">Rev</span></div>
+  <div class="stat-box overdue"><span class="stat-num">${s.overdue}</span><span class="stat-label">Overdue</span></div>
+`;
+
+    // assemble card
+    card.appendChild(img);
+    card.appendChild(nameDiv);
+    card.appendChild(titleDiv);
+    card.appendChild(statsGrid);
 
     card.onclick = () => {
       selectedManager = m.name;
@@ -620,13 +641,37 @@ function renderTasks() {
 
     const statusCls = `status-${safeText(t.status).replace(/\s+/g, "-").toLowerCase()}`;
 
-    card.innerHTML = `
-      <div class="status-badge ${statusCls}">${safeText(t.status)}</div>
-      <div class="task-title">${safeText(t.title)}</div>
-      <div class="task-meta">Start: ${safeText(t.startDate || "-")}</div>
-      <div class="task-meta">Due: ${safeText(toISODate(t.due) || "-")}</div>
-      <div class="task-meta">Owner: ${(Array.isArray(t.owner) ? t.owner : []).join(", ")}</div>
-    `;
+    // status badge
+    const statusDiv = document.createElement("div");
+    statusDiv.className = `status-badge ${statusCls}`;
+    statusDiv.textContent = safeText(t.status);
+
+    // title
+    const titleDiv = document.createElement("div");
+    titleDiv.className = "task-title";
+    titleDiv.textContent = safeText(t.title);
+
+    // start date
+    const startDiv = document.createElement("div");
+    startDiv.className = "task-meta";
+    startDiv.textContent = `Start: ${safeText(t.startDate || "-")}`;
+
+    // due date
+    const dueDiv = document.createElement("div");
+    dueDiv.className = "task-meta";
+    dueDiv.textContent = `Due: ${safeText(toISODate(t.due) || "-")}`;
+
+    // owners
+    const ownerDiv = document.createElement("div");
+    ownerDiv.className = "task-meta";
+    ownerDiv.textContent = `Owner: ${(Array.isArray(t.owner) ? t.owner : []).join(", ")}`;
+
+    // assemble card
+    card.appendChild(statusDiv);
+    card.appendChild(titleDiv);
+    card.appendChild(startDiv);
+    card.appendChild(dueDiv);
+    card.appendChild(ownerDiv);
 
     card.onclick = () => openViewModal(t, i);
 
