@@ -202,7 +202,7 @@ function fetchJSON(url, options = {}) {
   const method = (options.method || "GET").toUpperCase();
   if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
     const csrf = getCsrfToken();
-    if (csrf) headers.set("X-CSRFToken", csrf);
+    if (csrf) headers.set("X-CSRF-Token", csrf);
   }
 
   return fetch(url, { ...options, headers });
