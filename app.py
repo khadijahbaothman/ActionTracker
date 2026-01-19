@@ -15,10 +15,16 @@ DATA_FILE = os.environ.get("DATA_FILE", "data/tasks.json")
 ALLOWED_TAGS = []
 ALLOWED_ATTRS = {}
 
+# Whitelist fields (DTO) - مهم جدًا لـ Checkmarx
+ALLOWED_FIELDS = {"title", "startDate", "due", "owner", "status", "description", "link"}
+
+
+# ================= FILE HELPERS =================
 def ensure_data_dir():
     directory = os.path.dirname(DATA_FILE)
     if directory:
         os.makedirs(directory, exist_ok=True)
+
 
 def load_tasks():
     ensure_data_dir()
@@ -27,14 +33,21 @@ def load_tasks():
 
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            if not isinstance(data, dict):
+                return {"tasks": []}
+            if "tasks" not in data or not isinstance(data.get("tasks"), list):
+                return {"tasks": []}
+            return data
     except json.JSONDecodeError:
         return {"tasks": []}
+
 
 def save_tasks(data):
     ensure_data_dir()
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
 
 def validate_task(task):
     if not isinstance(task, dict):
@@ -45,21 +58,8 @@ def validate_task(task):
         return False
     return True
 
-# --------- Input Sanitization (before saving) ----------
-def sanitize_task(task):
-    fields_to_clean = ["title", "description", "link"]
 
-    for field in fields_to_clean:
-        if field in task and isinstance(task[field], str):
-            task[field] = bleach.clean(
-                task[field],
-                tags=ALLOWED_TAGS,
-                attributes=ALLOWED_ATTRS,
-                strip=True
-            )
-    return task
-
-# --------- Output Encoding (before returning) ----------
+# ================= SANITIZATION / ENCODING =================
 def encode_output(value):
     """
     Encode any string to be safe in HTML context.
@@ -69,34 +69,59 @@ def encode_output(value):
         return str(escape(value))
     return value
 
+
+def clean_str(v: str) -> str:
+    """
+    1) remove HTML tags (bleach)
+    2) output-encode (escape)
+    """
+    if v is None:
+        return ""
+    v = str(v)
+    v = bleach.clean(v, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRS, strip=True)
+    return encode_output(v)
+
+
+def safe_task_dto(task: dict) -> dict:
+    """
+    Build a safe Task DTO with ONLY allowed fields (whitelist).
+    This avoids dynamic key pass-through which Checkmarx flags.
+    """
+    dto = {
+        "title": clean_str(task.get("title", "")),
+        "startDate": clean_str(task.get("startDate", "")),
+        "due": clean_str(task.get("due", "")),
+        "status": clean_str(task.get("status", "")),
+        "description": clean_str(task.get("description", "")),
+        "link": clean_str(task.get("link", "")),
+        "owner": []
+    }
+
+    owners = task.get("owner", [])
+    if isinstance(owners, list):
+        dto["owner"] = [clean_str(x) for x in owners if x is not None]
+    else:
+        dto["owner"] = []
+
+    return dto
+
+
 def sanitize_tasks_output(data):
-    cleaned = {"tasks": []}
+    """
+    Sanitize output before returning to client.
+    Uses whitelist DTO to satisfy SAST engines.
+    """
+    tasks = data.get("tasks", [])
+    if not isinstance(tasks, list):
+        tasks = []
 
-    for task in data.get("tasks", []):
-        clean_task = {}
-        for key, value in task.items():
-            if isinstance(value, str):
-                # 1) clean
-                v = bleach.clean(value, tags=[], attributes={}, strip=True)
-                # 2) encode
-                clean_task[key] = encode_output(v)
+    safe_list = []
+    for t in tasks:
+        if isinstance(t, dict):
+            safe_list.append(safe_task_dto(t))
 
-            elif isinstance(value, list):
-                new_list = []
-                for v in value:
-                    if isinstance(v, str):
-                        v2 = bleach.clean(v, tags=[], attributes={}, strip=True)
-                        new_list.append(encode_output(v2))
-                    else:
-                        new_list.append(v)
-                clean_task[key] = new_list
+    return {"tasks": safe_list}
 
-            else:
-                clean_task[key] = value
-
-        cleaned["tasks"].append(clean_task)
-
-    return cleaned
 
 # ================= CSRF SIMPLE PROTECTION =================
 def get_csrf_token():
@@ -104,10 +129,12 @@ def get_csrf_token():
         session["csrf_token"] = token_urlsafe(32)
     return session["csrf_token"]
 
+
 def require_csrf():
     token = request.headers.get("X-CSRF-Token", "")
     if not token or token != session.get("csrf_token"):
         abort(403, description="CSRF token missing/invalid")
+
 
 # ================= HEADERS =================
 @app.after_request
@@ -136,17 +163,20 @@ def add_security_headers(response):
 
     return response
 
+
 # ================= ROUTES =================
 @app.route("/")
 def index():
     # نرسل CSRF token للفرونت
     return render_template("index.html", csrf_token=get_csrf_token())
 
+
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
     data = load_tasks()
     safe_data = sanitize_tasks_output(data)
     return jsonify(safe_data)
+
 
 @app.route("/api/tasks", methods=["POST"])
 def add_task():
@@ -158,11 +188,14 @@ def add_task():
     if not validate_task(task):
         return jsonify({"error": "Invalid task payload"}), 400
 
-    task = sanitize_task(task)
-    data["tasks"].append(task)
+    # IMPORTANT: Save safe DTO only (prevents stored XSS in storage)
+    safe_task = safe_task_dto(task)
+
+    data["tasks"].append(safe_task)
     save_tasks(data)
 
     return jsonify({"status": "success"}), 201
+
 
 @app.route("/api/tasks/<int:index>", methods=["PUT"])
 def update_task(index):
@@ -176,11 +209,13 @@ def update_task(index):
     if not validate_task(task):
         return jsonify({"error": "Invalid task payload"}), 400
 
-    task = sanitize_task(task)
-    data["tasks"][index] = task
+    safe_task = safe_task_dto(task)
+
+    data["tasks"][index] = safe_task
     save_tasks(data)
 
     return jsonify({"status": "updated"})
+
 
 @app.route("/api/tasks/<int:index>", methods=["DELETE"])
 def delete_task(index):
@@ -194,6 +229,7 @@ def delete_task(index):
     save_tasks(data)
 
     return jsonify({"status": "deleted"})
+
 
 # ================= MAIN =================
 if __name__ == "__main__":
